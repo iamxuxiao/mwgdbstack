@@ -1,0 +1,194 @@
+
+<html>
+  <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>mwgraphviz</title>
+
+    <script src=" https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js"></script>
+
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="http://canvg.github.io/canvg/rgbcolor.js"></script> 
+    <script type="text/javascript" src="http://canvg.github.io/canvg/StackBlur.js"></script>
+    <script type="text/javascript" src="http://canvg.github.io/canvg/canvg.js"></script> 
+
+    	<script src="https://cdn.jsdelivr.net/jquery.loadingoverlay/latest/loadingoverlay.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/jquery.loadingoverlay/latest/loadingoverlay_progress.min.js"></script>
+
+  </head>
+<body>
+
+
+<nav class="navbar navbar-inverse" style="margin-top:-40px">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/" style="color:white"> mwgdbstack : Visualize many gdb stacks in browser</a>
+    </div>
+    </ul>
+  </div>
+</nav>
+
+
+
+    <button type="button" class="btn btn-primary" id="sample_1_btn" >Sample 1: Multiple stacks </button>
+    <button type="button" class="btn btn-primary" id="sample_2_btn" >Sample 2: Single stack</button>
+
+<br>
+<br>
+<textarea class="form-control" id="graphviz_text" rows="20" cols="30" width="100%" wrap="off" placeholder="enter dot text here"></textarea>
+<p>
+<br>
+
+<button type="button" class="btn btn-primary" id="post_button" onclick="$.LoadingOverlay('show');"><b>Draw SVG Graph</b></button>
+    <button type="button" class="btn btn-primary" id="download_button"><b>Open PNG in another Tab</b></button>
+    <button type="button" class="btn btn-primary" id="upload_button" onclick="$.LoadingOverlay('show');"><b>Get an URL of the graph</b></button>
+
+    <br>
+
+    <div id="errorblock"></div> 
+    <span id="urlblock"  style="background-color: #FFFF00"></span> 
+    <br>
+
+    <div style="display:inline-block" id="mysvg">
+      </div>
+
+    <canvas id="canvas" style="visibility:hidden"></canvas>
+
+
+
+<script id="sample2" style="visibility:hidden">
+put some sample here!
+
+</script>
+    
+<script id="sample1" style="visibility:hidden">
+gdb_block1
+
+gdb_block2
+</script>
+
+
+</body>
+
+
+
+<script type="text/javascript">
+
+ 
+  $(document).ready(function() {
+      document.getElementById("download_button").disabled = true;
+      document.getElementById("upload_button").disabled = true;
+      
+  // post button
+  $('#post_button').on('click', function (e) {
+      //clean previous 
+      var theError = document.getElementById("errorblock");
+      theError.innerHTML='';      
+
+      //clean previous svg if there is any
+       var theSVG = document.getElementById("mysvg");
+      theSVG.innerHTML='';
+      
+      //clean the url
+      document.getElementById("urlblock").innerHTML='';
+
+      console.log('post button clicked');
+      var inputText = document.getElementById("graphviz_text").value;     
+      console.log(inputText);
+      
+      $.post('/postdata',
+             {data: inputText},
+             function(res){
+                  $.LoadingOverlay("hide");
+                  //console.log(res);
+		 //could parse the res here to determine whether if  need to draw or not. 
+		 try{
+                     allResult = JSON.parse(res);
+                     result = allResult.svg;
+
+		     
+		     console.log(allResult.name);
+		     if( result.errorMessage || result.type ){
+			 console.log('error!');
+			 var theError = document.getElementById("errorblock");
+			 theError.innerHTML="Wait  and Try again later! : "+res;
+		     }
+		     if(result.type){
+			 var theError = document.getElementById("errorblock");
+			 theError.innerHTML='syntax error';
+		     }
+               }catch(err){
+                     console.log("===============");
+               }
+		 
+                 //var theSVG = document.getElementById("mysvg");
+                 //theSVG.innerHTML=res;
+		 
+                         try{
+                             canvg('canvas', result);
+			     var theSVG = document.getElementById("mysvg");
+			     theSVG.innerHTML=result;
+                             document.getElementById("download_button").disabled = false;
+  			     document.getElementById("upload_button").disabled = false;
+
+                         }catch(err){
+                             console.log('error!');
+                             var theError = document.getElementById("errorblock");
+                             theError.innerHTML='syntax error';
+                         }
+
+             });    
+  });
+
+ // download button
+ $('#download_button').on('click', function (e) {
+  console.log('download button clicked');
+  var canvas = document.getElementById("canvas");
+  var img = canvas.toDataURL("image/png");
+  window.open(img); 
+ });
+
+  
+//payload too large if pass png. so   pass svg
+// upload button
+  $('#upload_button').on('click', function (e) {
+        //clean the url
+      document.getElementById("urlblock").innerHTML='';
+
+  console.log('upload button clicked');
+     var node = document.getElementById("mysvg");
+     var svgtext = node.innerHTML;
+      $.post('/uploaddata',
+            {data: svgtext},
+	     function(res){
+		 	     $.LoadingOverlay("hide");
+
+
+      console.log(res);
+      //feed url to a text box
+      urlroot="https://s3.amazonaws.com/bucketname/";
+      document.getElementById("urlblock").innerHTML=urlroot+res;
+	    });
+ });
+
+
+  
+  //sample button 1
+  $('#sample_1_btn').on('click', function (e){
+      var inputArea = document.getElementById("graphviz_text");
+      var sample1 = document.getElementById("sample1");
+      inputArea.value= sample1.innerText;
+  });
+  //sample button 1
+  $('#sample_2_btn').on('click', function (e){
+      var inputArea = document.getElementById("graphviz_text");
+      var sample2 = document.getElementById("sample2");
+      inputArea.value= sample2.innerText;
+  });
+  
+
+  });
+</script>
+
