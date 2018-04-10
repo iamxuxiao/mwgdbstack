@@ -8,5 +8,5 @@ A AWS Lambda function that draw multiple gdbstack, return the results as SVG and
 
 ## Screen capture
 
-![OneStack](https://github.com/iamxuxiao/mwgraphviz/blob/master/gdb_3.png)
+![OneStack](https://github.com/iamxuxiao/mwgdbstack/blob/master/gdb_3.png)
 
